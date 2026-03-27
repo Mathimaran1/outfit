@@ -1,0 +1,5 @@
+node_modules/
+__pycache__/
+venv/
+Backend/config.yaml
+Frontend/SoW/.env
