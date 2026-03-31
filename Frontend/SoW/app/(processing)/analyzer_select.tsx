@@ -1741,7 +1741,7 @@ export default function AnalyzerSelect() {
           analyzeFormData,
           {
             headers: {
-              'Content-Type': 'multipart/form-data'
+              Accept: 'application/json'
             },
             timeout: 30000 // 30 seconds timeout
           }

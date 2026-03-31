@@ -4346,7 +4346,7 @@ export default function AppearanceForm({ onComplete, visible }: AppearanceFormPr
       const apiResponse = await axios.post(`${BACKEND_URL}/api/analyze-face`, formData, {
         timeout: 30000,
         headers: {
-          'Content-Type': 'multipart/form-data',
+          Accept: 'application/json',
         },
       });
 

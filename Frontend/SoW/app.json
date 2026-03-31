@@ -12,9 +12,10 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.mathimaran.almari",
       "adaptiveIcon": {
         "foregroundImage": "./assets/Almari_logo.jpg",
-        "backgroundColor": "#000"
+        "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true
     },
@@ -33,10 +34,17 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "27ba3469-e00b-430a-bb8b-a6e349f6f7e0"
+      }
     }
   }
 }

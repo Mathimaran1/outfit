@@ -227,7 +227,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { router } from 'expo-router';
-import { getAuth, sendEmailVerification } from 'firebase/auth';
+import { getAuth, sendEmailVerification, signOut } from 'firebase/auth';
 import { app } from '../../firebaseConfig';
 import { MaterialIcons } from '@expo/vector-icons';
 
@@ -291,7 +291,16 @@ export default function Verify() {
 
           <TouchableOpacity
             style={styles.signInButton}
-            onPress={() => router.replace('/(auth)/sign_in')}
+            onPress={async () => {
+              try {
+                if (auth.currentUser) {
+                  await signOut(auth);
+                }
+              } catch (e) {
+                console.log('Error signing out:', e);
+              }
+              router.replace('/(auth)/sign_in');
+            }}
           >
             <Text style={styles.signInText}>Back to Sign In</Text>
           </TouchableOpacity>
