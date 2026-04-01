@@ -4354,12 +4354,33 @@ export default function AppearanceForm({ onComplete, visible }: AppearanceFormPr
       // Send the image to the backend
       const fullUrl = `${targetUrl}api/analyze-face`;
       console.log(`Sending image to ${fullUrl} (Timeout: 120s)`);
-      const apiResponse = await axios.post(fullUrl, formData, {
-        timeout: 120000, // 2 minutes
-        headers: {
-          Accept: 'application/json',
-        },
-      });
+      
+      let apiResponse;
+      try {
+        apiResponse = await axios.post(fullUrl, formData, {
+          timeout: 120000, // 2 minutes
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'multipart/form-data',
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36'
+          },
+        });
+      } catch (firstError) {
+        if (axios.isAxiosError(firstError) && !firstError.response) {
+          console.warn('First attempt failed, retrying in 2 seconds...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          apiResponse = await axios.post(fullUrl, formData, {
+            timeout: 120000, 
+            headers: {
+              Accept: 'application/json',
+              'Content-Type': 'multipart/form-data',
+              'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36'
+            },
+          });
+        } else {
+          throw firstError;
+        }
+      }
 
       // Process the response
       if (apiResponse.status === 200) {

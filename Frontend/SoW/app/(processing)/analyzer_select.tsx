@@ -1732,18 +1732,24 @@ export default function AnalyzerSelect() {
         name: 'upload.jpg'
       } as any);
 
-      // Send the image to the backend for analysis
-      console.log('Sending image to backend for analysis...');
+      // Slash-safe URL construction
+      const rawUrl = BACKEND_URL || 'https://mathi0x-almari-backend.hf.space';
+      const baseUrl = rawUrl.endsWith('/') ? rawUrl : `${rawUrl}/`;
+      const fullUrl = `${baseUrl}api/analyze-clothing`;
+      
+      console.log(`Sending image to ${fullUrl} for analysis...`);
       
       try {
         const analyzeResponse = await axios.post(
-          `${BACKEND_URL}/api/analyze-clothing`,
+          fullUrl,
           analyzeFormData,
           {
             headers: {
-              Accept: 'application/json'
+              Accept: 'application/json',
+              'Content-Type': 'multipart/form-data',
+              'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36'
             },
-            timeout: 90000 // 90 seconds timeout
+            timeout: 120000 // 120 seconds timeout
           }
         );
 
@@ -1792,23 +1798,23 @@ export default function AnalyzerSelect() {
         // Complete the analysis process
         setIsAnalyzing(false);
         
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error calling backend API:', err);
         
-        // Enhanced error handling - no fallback to mock data
-        const error = err as any;
         let errorMessage = 'Failed to analyze clothing. ';
         
-        if (error.code === 'ECONNABORTED') {
-          errorMessage += 'Request timed out. Please check your connection and try again.';
-        } else if (error.response?.status === 500) {
-          errorMessage += 'Server error occurred. Please try again later.';
-        } else if (error.response?.status === 404) {
-          errorMessage += 'Analysis service not found. Please contact support.';
-        } else if (error.message && error.message.includes('Backend')) {
-          errorMessage += 'Unable to analyze this image. Please try with a different image.';
+        if (axios.isAxiosError(err)) {
+          if (err.code === 'ECONNABORTED') {
+            errorMessage += 'Request timed out. Please check your connection and try again.';
+          } else if (err.response?.status === 500) {
+            errorMessage += 'Server error occurred. Please try again later.';
+          } else if (err.response?.status === 404) {
+            errorMessage += 'Analysis service not found. Please contact support.';
+          } else {
+            errorMessage += err.response?.data?.error || err.message;
+          }
         } else {
-          errorMessage += 'Please check your connection and try again.';
+            errorMessage += err.message || 'Please check your connection and try again.';
         }
         
         setAnalysisData(errorMessage);
