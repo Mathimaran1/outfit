@@ -15,12 +15,14 @@ def load_yaml():
                 for key in data:
                     if isinstance(data[key], dict) and 'api_key' in data[key]:
                         data[key]['api_key'] = env_api_key
+            data['timeout'] = 90000
             return data
     except Exception as e:
         return {
             'Clothing_Desc': {'api_key': env_api_key, 'model': 'meta/llama-3.2-90b-vision-instruct', 'max_tokens': 1024, 'temperature': 0.20, 'top_p': 0.70, 'frequency_penalty': 0, 'presence_penalty': 0},
             'Face_Desc': {'api_key': env_api_key, 'model': 'meta/llama-3.2-90b-vision-instruct', 'max_tokens': 1024, 'temperature': 0.20, 'top_p': 0.70},
-            'Recommendation_Analyze': {'api_key': env_api_key, 'model': 'meta/llama-3.1-405b-instruct', 'max_tokens': 1024, 'temperature': 0.20, 'top_p': 0.70, 'frequency_penalty': 0, 'presence_penalty': 0}
+            'Recommendation_Analyze': {'api_key': env_api_key, 'model': 'meta/llama-3.1-405b-instruct', 'max_tokens': 1024, 'temperature': 0.20, 'top_p': 0.70, 'frequency_penalty': 0, 'presence_penalty': 0},
+            'timeout': 90000
         }
 
 # Loading the prompt template
@@ -351,8 +353,9 @@ def get_recom_desc(clothes, face, cloth_compare, max_retries=3):
     logging.warning("Returning results after max retries with missing data")
     return {
         "recommendations": processed_response,
-        "overall_score": extracted_data.get("overall_score", "Re-Generate"),
-        "wardrobe_score": extracted_data.get("wardrobe_score", "Re-Generate"),
-        "top_rated_outfits": extracted_data.get("top_rated_outfits", ["Re-Generate"])
+        "overall_score": extracted_data.get("overall_score", 0),
+        "wardrobe_score": extracted_data.get("wardrobe_score", 0),
+        "top_rated_outfits": extracted_data.get("top_rated_outfits", []),
+        "improvements": extracted_data.get("improvements", {"replace_top": [], "replace_bottom": []})
     }
 
