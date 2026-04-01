@@ -74,8 +74,8 @@ def load_prompt(cloths, face, outfit_selected, occasion):
 
     Occasion: {occasion}
     Instructions:
-    Temp Clothing Match (if applicable):
-    - If an item's name contains '(TEMP)', it is temporary and must be rated separately. Ignore all other items in its category when evaluating temporary matches.
+    Temp Clothing Suitability (if applicable):
+    - If an item's name contains '(TEMP)', it is temporary and must be rated separately. Ignore all other items in its category when evaluating temporary suitability.
     -Rate (0-10) how well the temporary item fits the outfit.
     -If no temp item exists for a category, then only suggest the best from the wardrobe.
     - After rating a temp item, EXCLUDE its entire category from subsequent suggestions
@@ -91,18 +91,18 @@ def load_prompt(cloths, face, outfit_selected, occasion):
     -No need of reasoning for the ratings.
     -NEVER list replacement options for categories containing temp items. Only suggest for non-temp categories.
     -When a temp item exists in a category, DO NOT list that category under "Improvements" at all
-    -No scores in decimals.
+    -No scores in decimals. Use integers 0-10 only.
     -CRITICAL: NEVER suggest replacing an item with the exact same item the user is already wearing in the current outfit. Only suggest completely different items from the wardrobe.
 
     Suggestions:
     -Propose max 2 alternatives from each categories.
     -Prioritize fixes by severity.
-    -CRITICAL HOLISTIC MATCHING: When suggesting a replacement for a category (like Bottom), the new item MUST harmoniously match in color, style, and occasion with the *other existing untouched items* in the current outfit (like the Top).
+    -CRITICAL HOLISTIC PAIRING: When suggesting a replacement for a category (like Bottom), the new item MUST harmoniously pair in color, style, and occasion with the *other existing untouched items* in the current outfit (like the Top).
     -COLOR CLASH PREVENTION: Absolutely forbid suggesting an item that creates a terrible color combination with the rest of the outfit (e.g., do not suggest an olive green bottom if the current top is purple). Only suggest complementary colors.
 
     Scoring Rubric Additions 
     - Fatal Flaws (0-3/10):   
-        • Occasion mismatch (e.g., jeans for black-tie)  
+        • Occasion conflict (e.g., jeans for black-tie)  
         • Season violation (e.g., wool coat in summer)  
     - Major Penalties (-3 each):   
         • Color clashes with skin tone  
@@ -111,8 +111,8 @@ def load_prompt(cloths, face, outfit_selected, occasion):
         • Texture dissonance (e.g., silk with denim)  
 
     Output Format
-    Outfit Score: [X/10][Not to be in decial]
-    Temp Item Match Score [only if a TEMP clothing is present otherwise 0]: [X/10].
+    Outfit Score: [X/10][Not to be in decimal]
+    Temp Item Suitability Score [only if a TEMP clothing is present otherwise 0]: [X/10].
 
     Breakdown Overall Outfit: [X shouldn't be in decial]
     - Fit: [X/10]
@@ -167,7 +167,7 @@ def extract_key_metrics(response_text):
     """
     Extract specific metrics from the LLM response:
     1. Outfit Score (after "Outfit Score:")
-    2. Temp Item Match Score (after "Temp Item Match Score:")
+    2. Temp Item Suitability Score (after "Temp Item Suitability Score:")
     3. Replace suggestions (after "Replace [Category]:")
     4. Breakdown scores (Color, Occasion, Design, etc.)
     
@@ -187,8 +187,8 @@ def extract_key_metrics(response_text):
         outfit_score = float(outfit_score_match.group(1))
         logging.info(f"Extracted outfit score: {outfit_score}/10")
     
-    # Extract temp item match score - pattern: "Temp Item Match Score (if any): X/10"
-    temp_score_match = re.search(r'Temp Item Match.*?:\s*(\d+(?:\.\d+)?)/10', response_text)
+    # Extract temp item suitability score - pattern: "Temp Item Suitability Score (if any): X/10"
+    temp_score_match = re.search(r'Temp Item Suitability.*?:\s*(\d+(?:\.\d+)?)/10', response_text)
     if temp_score_match:
         temp_score = float(temp_score_match.group(1))
         logging.info(f"Extracted temp score: {temp_score}/10")
