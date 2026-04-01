@@ -19,8 +19,13 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]
 )
 
-# Initialize Flask app
-app = Flask(__name__)
+# Request logging middleware
+@app.before_request
+def log_request_info():
+    logging.info(
+        f"Incoming request: {request.method} {request.path} from {request.remote_addr}\n"
+        f"Headers: {dict(request.headers)}"
+    )
 # Explicitly enable CORS with comprehensive defaults for mobile apps
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
