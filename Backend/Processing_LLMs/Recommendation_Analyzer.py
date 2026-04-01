@@ -163,10 +163,20 @@ def process_response(response_text):
     # Clean up formatting for UI display
     cleaned_text = cleaned_text.replace("##","").replace("**","")
     
-    # Remove any stray "Replace Top" or "Replace Bottom" sections from the text 
-    # if the AI ignores instructions, to keep the UI clean.
-    cleaned_text = re.sub(r'(?i)Replace Top:[\s\S]*?(?=\n\n|\Z)', '', cleaned_text)
-    cleaned_text = re.sub(r'(?i)Replace Bottom:[\s\S]*?(?=\n\n|\Z)', '', cleaned_text)
+    # Aggressive Truncation: Strike out all content that starts looking like AI metadata or replacements
+    # This prevents the AI "chatter" from appearing in the visual report.
+    truncate_patterns = [
+        r'(?i)JSON Improvements Field:',
+        r'(?i)Replace Top:',
+        r'(?i)Replace Bottom:',
+        r'(?i)NOTE:',
+        r'(?i)Top Rated Outfits:'
+    ]
+    
+    for pattern in truncate_patterns:
+        parts = re.split(pattern, cleaned_text, flags=re.IGNORECASE)
+        if len(parts) > 1:
+            cleaned_text = parts[0]
     
     logging.info(f"Processed text length: {len(cleaned_text)}")
     return cleaned_text.strip()
