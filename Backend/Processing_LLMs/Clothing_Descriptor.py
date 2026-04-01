@@ -14,11 +14,24 @@ logging.basicConfig(
 
 # Load YAML config
 def load_yaml():
-    logging.info("Loading API key and config from YAML")
-    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.yaml")
-    with open(config_path, "r") as file:
-        data = yaml.safe_load(file)
-    return data
+    env_api_key = os.environ.get("NVIDIA_API_KEY")
+    try:
+        logging.info("Loading API key and config from YAML")
+        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.yaml")
+        with open(config_path, "r") as file:
+            data = yaml.safe_load(file)
+            if env_api_key:
+                for key in data:
+                    if isinstance(data[key], dict) and 'api_key' in data[key]:
+                        data[key]['api_key'] = env_api_key
+            return data
+    except Exception as e:
+        logging.warning("YAML load failed. Falling back to Environment Variables.")
+        return {
+            'Clothing_Desc': {'api_key': env_api_key, 'model': 'meta/llama-3.2-90b-vision-instruct', 'max_tokens': 1024, 'temperature': 0.20, 'top_p': 0.70, 'frequency_penalty': 0, 'presence_penalty': 0},
+            'Face_Desc': {'api_key': env_api_key, 'model': 'meta/llama-3.2-90b-vision-instruct', 'max_tokens': 1024, 'temperature': 0.20, 'top_p': 0.70},
+            'Recommendation_Analyze': {'api_key': env_api_key, 'model': 'meta/llama-3.1-405b-instruct', 'max_tokens': 1024, 'temperature': 0.20, 'top_p': 0.70, 'frequency_penalty': 0, 'presence_penalty': 0}
+        }
 
 # Prompt template
 def load_prompt():
