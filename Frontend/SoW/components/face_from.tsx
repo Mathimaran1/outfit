@@ -4326,12 +4326,13 @@ export default function AppearanceForm({ onComplete, visible }: AppearanceFormPr
 
     setAnalyzing(true);
     setAnalysisError(null);
+    const targetUrl = `${BACKEND_URL || 'https://mathi0x-almari-backend.hf.space'}/`;
     
     try {
       // --- WAKE UP CALL & VERIFY CONNECTION ---
-      console.log(`Verifying connection to ${BACKEND_URL || 'https://mathi0x-almari-backend.hf.space'}...`);
+      console.log(`Verifying connection to ${targetUrl}...`);
       try {
-        await axios.get(`${BACKEND_URL || 'https://mathi0x-almari-backend.hf.space'}/`, { timeout: 10000 });
+        await axios.get(targetUrl, { timeout: 10000 });
         console.log('Backend is awake and reachable!');
       } catch (e) {
         console.warn('Initial wake-up call failed, attempting POST anyway...', e);
@@ -4347,9 +4348,8 @@ export default function AppearanceForm({ onComplete, visible }: AppearanceFormPr
       } as any);
 
       // Send the image to the backend
-      const targetUrl = `${BACKEND_URL || 'https://mathi0x-almari-backend.hf.space'}`;
-      console.log(`Sending image to ${targetUrl}/api/analyze-face (Timeout: 120s)`);
-      const apiResponse = await axios.post(`${targetUrl}/api/analyze-face`, formData, {
+      console.log(`Sending image to ${targetUrl}api/analyze-face (Timeout: 120s)`);
+      const apiResponse = await axios.post(`${targetUrl}api/analyze-face`, formData, {
         timeout: 120000, // 2 minutes
         headers: {
           Accept: 'application/json',
@@ -4374,19 +4374,23 @@ export default function AppearanceForm({ onComplete, visible }: AppearanceFormPr
     } catch (error: any) {
       console.error('Error analyzing face:', error);
       let errorMsg = 'Analysis Failed. Please Try Again';
+      let debugInfo = `URL: ${targetUrl}/api/analyze-face\n`;
       
       if (axios.isAxiosError(error)) {
+        debugInfo += `Type: AxiosError\nCode: ${error.code}\nMsg: ${error.message}`;
         if (error.code === 'ECONNABORTED') {
-          errorMsg = 'Timeout: The analysis is taking too long. Please try with a clearer image or better network.';
+          errorMsg = 'Timeout: The analysis is taking too long.';
         } else if (!error.response) {
-          errorMsg = 'Network Error: Cannot connect to server. Please check your internet.';
+          errorMsg = 'Network Error: Cannot connect to server.';
         } else {
           errorMsg = `Server Error: ${error.response.data?.error || error.message}`;
         }
+      } else {
+        debugInfo += `Type: Unknown\nMsg: ${error.message}`;
       }
       
       setAnalysisError(errorMsg);
-      Alert.alert('Analysis Detail', errorMsg);
+      Alert.alert('Network Diagnostic', `${errorMsg}\n\n-- TECHNICAL DETAILS --\n${debugInfo}`);
     } finally {
       setAnalyzing(false);
     }

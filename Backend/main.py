@@ -21,16 +21,22 @@ logging.basicConfig(
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+# Explicitly enable CORS with comprehensive defaults for mobile apps
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 # Configure upload folder
 UPLOAD_FOLDER = tempfile.gettempdir()
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # Increase to 100MB for high-res photos
+# Increased limit for high-resolutions photos from modern phones
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024 
 
 @app.route('/', methods=['GET'])
 def root():
-    return jsonify({"status": "healthy", "service": "Almari Backend"}), 200
+    return jsonify({
+        "status": "healthy",
+        "service": "Almari Backend",
+        "message": "Public access verified"
+    }), 200
 
 @app.route('/api/analyze-face', methods=['POST'])
 def analyze_face():
