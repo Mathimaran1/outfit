@@ -15,46 +15,34 @@ def load_yaml():
                 for key in data:
                     if isinstance(data[key], dict) and 'api_key' in data[key]:
                         data[key]['api_key'] = env_api_key
-            data['timeout'] = 90000
             return data
     except Exception as e:
         return {
             'Clothing_Desc': {'api_key': env_api_key, 'model': 'meta/llama-3.2-90b-vision-instruct', 'max_tokens': 1024, 'temperature': 0.20, 'top_p': 0.70, 'frequency_penalty': 0, 'presence_penalty': 0},
             'Face_Desc': {'api_key': env_api_key, 'model': 'meta/llama-3.2-90b-vision-instruct', 'max_tokens': 1024, 'temperature': 0.20, 'top_p': 0.70},
-            'Recommendation_Analyze': {'api_key': env_api_key, 'model': 'meta/llama-3.1-405b-instruct', 'max_tokens': 1024, 'temperature': 0.20, 'top_p': 0.70, 'frequency_penalty': 0, 'presence_penalty': 0},
-            'timeout': 90000
+            'Recommendation_Analyze': {'api_key': env_api_key, 'model': 'meta/llama-3.1-405b-instruct', 'max_tokens': 1024, 'temperature': 0.20, 'top_p': 0.70, 'frequency_penalty': 0, 'presence_penalty': 0}
         }
 
 # Loading the prompt template
-def load_prompt(clothes, face, cloth_compare):
+def load_prompt(cloths, face, cloth_compare):
     logging.info("Loading the prompt template for the analysis")
-    
-    # Identify the current item to avoid self-recommendation
-    current_item_name = "Unknown"
-    current_item_category = "Unknown"
-    
-    try:
-        if isinstance(cloth_compare, str):
-            # Try to find Name: and Category: in the string
-            name_match = re.search(r"Name:\s*([^\n]+)", cloth_compare)
-            if name_match: current_item_name = name_match.group(1).strip()
-            
-            cat_match = re.search(r"Category:\s*([^\n]+)", cloth_compare)
-            if cat_match: current_item_category = cat_match.group(1).strip()
-    except:
-        pass
-
     return f"""
             REVISED PROMPT TEMPLATE — AI Stylist Evaluation (Stable & Consistent)
-            You are a strict and precise AI fashion stylist. Your task is to evaluate a NEW clothing item against 
-            a user's personal features and wardrobe and provide specific, CATEGORIZED replacement suggestions.
-
-            CRITICAL SAFETY RULE:
-            - NEVER suggest the item named "{current_item_name}". It is already being worn/analyzed.
-            - "Replace Top" MUST only contain items that are explicitly categorized as Tops, Shirts, T-shirts, or Jackets.
-            - "Replace Bottom" MUST only contain items that are explicitly categorized as Bottoms, Pants, Trousers, or Jeans.
+            You are a strict and precise AI fashion stylist trained to evaluate a new clothing item against 
+            a user's personal features and wardrobe. Your task is to produce a consistent, reasoned, and 
+            comparative report.Only rate when meaningful. Penalize generously. Follow strict logic. Avoid high 
+            scores unless fully justified. You are an unforgiving, hyper-precise AI fashion evaluator. 
+            Your task is to ruthlessly assess the new clothing item against the user's features and wardrobe. No exceptions, no leniency.
 
             User Details
+            Use the following face and body features for all personalization:
+            Face Type
+            Face Size
+            Face Structure
+            Skin Color
+            Hair Density
+            Beard Type
+            Body Type
             Height & Weight (for fat%)
             Age
             Details: 
@@ -81,7 +69,7 @@ def load_prompt(clothes, face, cloth_compare):
             Material
             Fit
             Texture
-            Details: {clothes}
+            Details: {cloths}
 
             Additional Enforcements:
             -Use the same name to refer the clothing item in the report.
@@ -98,25 +86,22 @@ def load_prompt(clothes, face, cloth_compare):
 
             No such words and general comments other than the formatted output.
             Output Format (Mandatory) follow this at any cost:
-            
-            Features:
-            • Face Shape Suitability - X/10. Reasoning: [1 concise sentence explaining the score]
-            • Complexion Matching - X/10. Reasoning: [1 concise sentence explaining the score]
-            • Body Type Fit - X/10. Reasoning: [1 concise sentence explaining the score]
-            • Beard & Hair Compatibility - X/10. Reasoning: [1 concise sentence explaining the score]
-            • Age Appropriateness - X/10. Reasoning: [1 concise sentence explaining the score]
-            • Overall Suitability - X/10. Reasoning: [1 concise sentence explaining how the outfit matches the user's features]
 
-            Wardrobe Comparison (Ranked by Compatibility):
-            • [Item Name] - X/10
-            
+            Features:
+            Face Shape Suitability - X/10
+            Complexion Matching - X/10
+            Body Type Fit - X/10
+            Beard & Hair Compatibility - X/10
+            Age Appropriateness - X/10
+            Overall Style Cohesion - X/10
+
+            Wardrobe Comparison (Exclude Same Category and arrange in descending order of scores):
+            [Wardrobe Item Name] - X/10
             Overall Wardrobe Matches - X/10
 
             Final Verdict:
             Overall Score : X/10
-            
-            Note: Do NOT include "Replace Top" or "Replace Bottom" sections in this text report. 
-            They must only be returned in the JSON improvements field.
+            Top Rated Outfits:[Wardrobe names only 5, descending order of scores. Don't display if the score is less than or equal to 5]
         """
 
 # Formatting the response
@@ -160,25 +145,11 @@ def process_response(response_text):
     # Format item names
     cleaned_text = re.sub(r'\[([^\]]+)\]', r'\1', cleaned_text)
     cleaned_text = re.sub(r'Top Rated Outfits:.*?(?=\n\n|\Z)', '', cleaned_text, flags=re.DOTALL)
-    # Clean up formatting for UI display
-    cleaned_text = cleaned_text.replace("##","").replace("**","")
-    
-    # Aggressive Truncation: Strike out all content that starts looking like AI metadata or replacements
-    # This prevents the AI "chatter" from appearing in the visual report.
-    truncate_patterns = [
-        r'(?i)JSON Improvements Field:',
-        r'(?i)Replace Top:',
-        r'(?i)Replace Bottom:',
-        r'(?i)NOTE:',
-        r'(?i)Top Rated Outfits:'
-    ]
-    
-    for pattern in truncate_patterns:
-        parts = re.split(pattern, cleaned_text, flags=re.IGNORECASE)
-        if len(parts) > 1:
-            cleaned_text = parts[0]
+    cleaned_text = cleaned_text.replace("##","")
+    cleaned_text = cleaned_text.replace("**","")
     
     logging.info(f"Processed text length: {len(cleaned_text)}")
+    
     return cleaned_text.strip()
 
 # Extracting the scores for the UI
@@ -197,7 +168,16 @@ def extract_scores_and_outfits(response_text):
     overall_score = None
     wardrobe_score = None
     top_rated_outfits = []
-    improvements = {"replace_top": [], "replace_bottom": []}
+    
+    # Feature scores
+    feature_scores = {
+        "face_shape": None,
+        "complexion": None,
+        "body_type": None,
+        "beard_hair": None,
+        "age": None,
+        "style_cohesion": None
+    }
     
     # Extract overall score - it appears after "Overall Score:"
     # Pattern: "Overall Score: (X/10)" or "Overall Score : (X/10)"
@@ -212,6 +192,22 @@ def extract_scores_and_outfits(response_text):
     if wardrobe_score_match:
         wardrobe_score = int(wardrobe_score_match.group(1))
         logging.info(f"Extracted wardrobe matches score: {wardrobe_score}/10")
+
+    # Extract feature scores
+    feature_patterns = {
+        "face_shape": r'Face Shape Suitability\s*[-:]\s*(\d+)',
+        "complexion": r'Complexion Matching\s*[-:]\s*(\d+)',
+        "body_type": r'Body Type Fit\s*[-:]\s*(\d+)',
+        "beard_hair": r'Beard & Hair Compatibility\s*[-:]\s*(\d+)',
+        "age": r'Age Appropriateness\s*[-:]\s*(\d+)',
+        "style_cohesion": r'Overall Style Cohesion\s*[-:]\s*(\d+)'
+    }
+
+    for key, pattern in feature_patterns.items():
+        match = re.search(pattern, response_text)
+        if match:
+            feature_scores[key] = int(match.group(1))
+            logging.info(f"Extracted {key} score: {feature_scores[key]}/10")
     
     # Extract top rated outfits - appears after "Top Rated Outfits:" line
     # and items may be separated by commas
@@ -237,48 +233,13 @@ def extract_scores_and_outfits(response_text):
                 if outfit_name:
                     top_rated_outfits.append(outfit_name)
         
-    logging.info(f"Extracted {len(top_rated_outfits)} top rated outfits")
-
-    # Extract Improvements (Replace Top/Bottom)
-    try:
-        # Match "Replace Top: Name1, Name2" or "Replace Top: Name1"
-        top_match = re.search(r"Replace Top:\s*([^\n]+)", response_text)
-        if top_match:
-            tops = [t.strip().replace("*", "") for t in top_match.group(1).split(",") if t.strip()]
-            improvements["replace_top"] = tops[:2] 
-
-        bottom_match = re.search(r"Replace Bottom:\s*([^\n]+)", response_text)
-        if bottom_match:
-            bottoms = [b.strip().replace("*", "") for b in bottom_match.group(1).split(",") if b.strip()]
-            improvements["replace_bottom"] = bottoms[:2]
-    except:
-        pass
+        logging.info(f"Extracted {len(top_rated_outfits)} top rated outfits")
     
-    # Extract Detailed Analysis Reasoning for UI cards
-    detailed_analysis = {
-        "faceCompatibility": "Analysis based on your facial features",
-        "bodyTypeMatch": "Outfit evaluated for your body type",
-        "colorAnalysis": "Color coordination analyzed",
-        "styleRecommendations": "Style evaluated based on features"
-    }
-    
-    face_match = re.search(r'Face Shape Suitability - \d+/10\. Reasoning:\s*(.*?)(?=\n|•|\Z)', response_text)
-    if face_match: detailed_analysis["faceCompatibility"] = face_match.group(1).strip()
-    
-    body_match = re.search(r'Body Type Fit - \d+/10\. Reasoning:\s*(.*?)(?=\n|•|\Z)', response_text)
-    if body_match: detailed_analysis["bodyTypeMatch"] = body_match.group(1).strip()
-    
-    color_match = re.search(r'Complexion Matching - \d+/10\. Reasoning:\s*(.*?)(?=\n|•|\Z)', response_text)
-    if color_match: detailed_analysis["colorAnalysis"] = color_match.group(1).strip()
-    
-    style_match = re.search(r'Overall Suitability - \d+/10\. Reasoning:\s*(.*?)(?=\n|•|\Z)', response_text)
-    if style_match: detailed_analysis["styleRecommendations"] = style_match.group(1).strip()
-
     return {
         "overall_score": overall_score,
         "wardrobe_score": wardrobe_score,
         "top_rated_outfits": top_rated_outfits,
-        "improvements": improvements
+        "feature_scores": feature_scores
     }
 
 # The main execution of the application
@@ -350,7 +311,8 @@ def get_recom_desc(clothes, face, cloth_compare, max_retries=3):
             
             # Check if any critical data is missing
             if (extracted_data["overall_score"] is None or 
-                extracted_data["wardrobe_score"] is None):
+                extracted_data["wardrobe_score"] is None or 
+                extracted_data["top_rated_outfits"] == []):
                 
                 retry_count += 1
                 logging.warning(f"Missing critical data in LLM response. Retry attempt {retry_count}/{max_retries}")
@@ -374,7 +336,7 @@ def get_recom_desc(clothes, face, cloth_compare, max_retries=3):
                 "overall_score": extracted_data["overall_score"],
                 "wardrobe_score": extracted_data["wardrobe_score"],
                 "top_rated_outfits": extracted_data["top_rated_outfits"],
-                "improvements": extracted_data["improvements"]
+                "feature_scores": extracted_data["feature_scores"]
             }
             
         except Exception as e:
@@ -382,16 +344,16 @@ def get_recom_desc(clothes, face, cloth_compare, max_retries=3):
             logging.error(f"Error during LLM processing: {str(e)}. Retry attempt {retry_count}/{max_retries}")
             
             if retry_count >= max_retries:
-                logging.error("Max retries reached after exceptions. Returning fallback data.")
-                break
+                logging.error("Max retries reached after exceptions. Raising error.")
+                raise
     
     # If we get here after max retries, return whatever we have
     logging.warning("Returning results after max retries with missing data")
     return {
         "recommendations": processed_response,
-        "overall_score": extracted_data.get("overall_score", 0),
-        "wardrobe_score": extracted_data.get("wardrobe_score", 0),
-        "top_rated_outfits": extracted_data.get("top_rated_outfits", []),
-        "improvements": extracted_data.get("improvements", {"replace_top": [], "replace_bottom": []})
+        "overall_score": extracted_data.get("overall_score", "Re-Generate"),
+        "wardrobe_score": extracted_data.get("wardrobe_score", "Re-Generate"),
+        "top_rated_outfits": extracted_data.get("top_rated_outfits", ["Re-Generate"]),
+        "feature_scores": extracted_data.get("feature_scores", {})
     }
 
