@@ -48,7 +48,9 @@ def root():
     }), 200
 
 @app.route('/api/analyze-face', methods=['POST'])
+@app.route('/api/analyze-face/', methods=['POST'])
 @app.route('//api/analyze-face', methods=['POST'])
+@app.route('//api/analyze-face/', methods=['POST'])
 def analyze_face():
     """
     Endpoint to analyze a face image
@@ -87,7 +89,9 @@ def analyze_face():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/analyze-clothing', methods=['POST'])
+@app.route('/api/analyze-clothing/', methods=['POST'])
 @app.route('//api/analyze-clothing', methods=['POST'])
+@app.route('//api/analyze-clothing/', methods=['POST'])
 def analyze_clothing():
     """
     Endpoint to analyze clothing images
@@ -136,7 +140,9 @@ def analyze_clothing():
         return jsonify({'error': f'Failed to analyze clothing: {str(e)}'}), 500
 
 @app.route('/api/get-recommendations', methods=['POST'])
+@app.route('/api/get-recommendations/', methods=['POST'])
 @app.route('//api/get-recommendations', methods=['POST'])
+@app.route('//api/get-recommendations/', methods=['POST'])
 def get_recommendations():
     """
     Endpoint to get clothing recommendations based on face and clothing analysis
