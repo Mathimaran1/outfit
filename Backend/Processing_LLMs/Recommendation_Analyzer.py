@@ -1,14 +1,7 @@
 import yaml
 import logging
 import re
-from openai import OpenAI
-
-# Configure logging for the project
-logging.basicConfig(
-    format='[%(levelname)s] %(asctime)s - %(message)s',
-    level=logging.INFO,
-    handlers=[logging.StreamHandler()]
-)
+import requests
 
 # Loading the YAML file
 def load_yaml():
@@ -29,16 +22,6 @@ def load_yaml():
             'Face_Desc': {'api_key': env_api_key, 'model': 'meta/llama-3.2-90b-vision-instruct', 'max_tokens': 1024, 'temperature': 0.20, 'top_p': 0.70},
             'Recommendation_Analyze': {'api_key': env_api_key, 'model': 'meta/llama-3.1-405b-instruct', 'max_tokens': 1024, 'temperature': 0.20, 'top_p': 0.70, 'frequency_penalty': 0, 'presence_penalty': 0}
         }
-
-# Loading the client for the LLM
-def load_model(api_key):
-    # Load the API key from the environment variable
-    logging.info("Loading Client for the LLM")
-    client = OpenAI(
-        base_url="https://integrate.api.nvidia.com/v1",
-        api_key=api_key
-    )
-    return client
 
 # Loading the prompt template
 def load_prompt(cloths, face, cloth_compare):
@@ -249,8 +232,15 @@ def get_recom_desc(clothes, face, cloth_compare, max_retries=3):
     logging.info("Loading the clothing descriptor part of application")
     # Setting up the basic requirements:
     config = load_yaml()
-    client = load_model(config['Recommendation_Analyze']['api_key'])
+    api_key = config['Recommendation_Analyze']['api_key']
     prompt = load_prompt(clothes, face, cloth_compare)
+
+    # NVIDIA API configuration
+    invoke_url = "https://integrate.api.nvidia.com/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Accept": "application/json"
+    }
 
     retry_count = 0
     extracted_data = {}
@@ -258,19 +248,33 @@ def get_recom_desc(clothes, face, cloth_compare, max_retries=3):
     
     while retry_count < max_retries:
         try:
-            # Sending the request to the LLM
-            chat_completion = client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
-                model=config['Recommendation_Analyze']['model'],
-                temperature=config['Recommendation_Analyze']['temperature'],
-                max_tokens=config['Recommendation_Analyze']['max_tokens'],
-                top_p=config['Recommendation_Analyze']['top_p'],
-                frequency_penalty=config['Recommendation_Analyze']['frequency_penalty'],
-                presence_penalty=config['Recommendation_Analyze']['presence_penalty'],
-                stream=False
-            )
+            # Prepare payload
+            payload = {
+                "model": config['Recommendation_Analyze']['model'],
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                "max_tokens": config['Recommendation_Analyze']['max_tokens'],
+                "temperature": config['Recommendation_Analyze']['temperature'],
+                "top_p": config['Recommendation_Analyze']['top_p'],
+                "frequency_penalty": config['Recommendation_Analyze']['frequency_penalty'],
+                "presence_penalty": config['Recommendation_Analyze']['presence_penalty'],
+                "stream": False
+            }
+
+            # Make API request
+            logging.info("Sending request to NVIDIA API")
+            response = requests.post(invoke_url, headers=headers, json=payload, timeout=60)
             
-            raw_response = chat_completion.choices[0].message.content
+            # Check for errors
+            response.raise_for_status()
+            
+            # Parse response
+            result = response.json()
+            raw_response = result['choices'][0]['message']['content']
             
             # First extract the data before processing the response
             extracted_data = extract_scores_and_outfits(raw_response)
