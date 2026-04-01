@@ -81,7 +81,7 @@ def load_prompt(clothes, face, cloth_compare):
             Material
             Fit
             Texture
-            Details: {cloths}
+            Details: {clothes}
 
             Additional Enforcements:
             -Use the same name to refer the clothing item in the report.
