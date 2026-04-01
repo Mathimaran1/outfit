@@ -100,12 +100,12 @@ def load_prompt(clothes, face, cloth_compare):
             Output Format (Mandatory) follow this at any cost:
             
             Features:
-            • Face Shape Suitability - X/10
-            • Complexion Matching - X/10
-            • Body Type Fit - X/10
-            • Beard & Hair Compatibility - X/10
-            • Age Appropriateness - X/10
-            • Overall Suitability - X/10
+            • Face Shape Suitability - X/10. Reasoning: [1 concise sentence explaining the score]
+            • Complexion Matching - X/10. Reasoning: [1 concise sentence explaining the score]
+            • Body Type Fit - X/10. Reasoning: [1 concise sentence explaining the score]
+            • Beard & Hair Compatibility - X/10. Reasoning: [1 concise sentence explaining the score]
+            • Age Appropriateness - X/10. Reasoning: [1 concise sentence explaining the score]
+            • Overall Suitability - X/10. Reasoning: [1 concise sentence explaining how the outfit matches the user's features]
 
             Wardrobe Comparison (Ranked by Compatibility):
             • [Item Name] - X/10
@@ -244,6 +244,26 @@ def extract_scores_and_outfits(response_text):
     except:
         pass
     
+    # Extract Detailed Analysis Reasoning for UI cards
+    detailed_analysis = {
+        "faceCompatibility": "Analysis based on your facial features",
+        "bodyTypeMatch": "Outfit evaluated for your body type",
+        "colorAnalysis": "Color coordination analyzed",
+        "styleRecommendations": "Style evaluated based on features"
+    }
+    
+    face_match = re.search(r'Face Shape Suitability - \d+/10\. Reasoning:\s*(.*?)(?=\n|•|\Z)', response_text)
+    if face_match: detailed_analysis["faceCompatibility"] = face_match.group(1).strip()
+    
+    body_match = re.search(r'Body Type Fit - \d+/10\. Reasoning:\s*(.*?)(?=\n|•|\Z)', response_text)
+    if body_match: detailed_analysis["bodyTypeMatch"] = body_match.group(1).strip()
+    
+    color_match = re.search(r'Complexion Matching - \d+/10\. Reasoning:\s*(.*?)(?=\n|•|\Z)', response_text)
+    if color_match: detailed_analysis["colorAnalysis"] = color_match.group(1).strip()
+    
+    style_match = re.search(r'Overall Suitability - \d+/10\. Reasoning:\s*(.*?)(?=\n|•|\Z)', response_text)
+    if style_match: detailed_analysis["styleRecommendations"] = style_match.group(1).strip()
+
     return {
         "overall_score": overall_score,
         "wardrobe_score": wardrobe_score,
