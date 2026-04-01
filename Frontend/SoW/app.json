@@ -13,6 +13,12 @@
     },
     "android": {
       "package": "com.mathimaran.almari",
+      "permissions": [
+        "INTERNET",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/Almari_logo.jpg",
         "backgroundColor": "#000000"

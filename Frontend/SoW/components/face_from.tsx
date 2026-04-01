@@ -4328,23 +4328,29 @@ export default function AppearanceForm({ onComplete, visible }: AppearanceFormPr
     setAnalysisError(null);
     
     try {
+      // --- WAKE UP CALL & VERIFY CONNECTION ---
+      console.log(`Verifying connection to ${BACKEND_URL || 'https://mathi0x-almari-backend.hf.space'}...`);
+      try {
+        await axios.get(`${BACKEND_URL || 'https://mathi0x-almari-backend.hf.space'}/`, { timeout: 10000 });
+        console.log('Backend is awake and reachable!');
+      } catch (e) {
+        console.warn('Initial wake-up call failed, attempting POST anyway...', e);
+      }
+      // ----------------------------------------
+
       // Create FormData to send the image
       const formData = new FormData();
-      
-      // Get the file name from the URI
-      const uriParts = image.split('.');
-      const fileType = uriParts[uriParts.length - 1];
-      
-      // Append the image to FormData with the correct type
       formData.append('image', {
         uri: image,
-        name: `photo.${fileType}`,
-        type: `image/${fileType}`
+        type: 'image/jpeg',
+        name: 'upload.jpg',
       } as any);
 
       // Send the image to the backend
-      const apiResponse = await axios.post(`${BACKEND_URL}/api/analyze-face`, formData, {
-        timeout: 90000,
+      const targetUrl = `${BACKEND_URL || 'https://mathi0x-almari-backend.hf.space'}`;
+      console.log(`Sending image to ${targetUrl}/api/analyze-face (Timeout: 120s)`);
+      const apiResponse = await axios.post(`${targetUrl}/api/analyze-face`, formData, {
+        timeout: 120000, // 2 minutes
         headers: {
           Accept: 'application/json',
         },
@@ -4354,9 +4360,8 @@ export default function AppearanceForm({ onComplete, visible }: AppearanceFormPr
       if (apiResponse.status === 200) {
         // Debug logs to understand the response structure
         console.log('API Response:', apiResponse.data);
-        console.log('API Response Type:', typeof apiResponse.data);
         
-        // Extract the result properly - handle both string and object responses
+        // Extract the result properly
         const result = typeof apiResponse.data === 'string' 
           ? apiResponse.data 
           : apiResponse.data.message || apiResponse.data.result || JSON.stringify(apiResponse.data);
@@ -4364,11 +4369,24 @@ export default function AppearanceForm({ onComplete, visible }: AppearanceFormPr
         setFaceAnalysisResult(result);
         setCurrentStep(3);
       } else {
-        throw new Error('Failed to analyze face');
+        throw new Error(`Server returned status ${apiResponse.status}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error analyzing face:', error);
-      setAnalysisError('Analysis Failed. Please Try Again');
+      let errorMsg = 'Analysis Failed. Please Try Again';
+      
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ECONNABORTED') {
+          errorMsg = 'Timeout: The analysis is taking too long. Please try with a clearer image or better network.';
+        } else if (!error.response) {
+          errorMsg = 'Network Error: Cannot connect to server. Please check your internet.';
+        } else {
+          errorMsg = `Server Error: ${error.response.data?.error || error.message}`;
+        }
+      }
+      
+      setAnalysisError(errorMsg);
+      Alert.alert('Analysis Detail', errorMsg);
     } finally {
       setAnalyzing(false);
     }

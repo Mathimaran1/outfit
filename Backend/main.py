@@ -26,7 +26,11 @@ CORS(app)  # Enable CORS for all routes
 # Configure upload folder
 UPLOAD_FOLDER = tempfile.gettempdir()
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload size
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # Increase to 100MB for high-res photos
+
+@app.route('/', methods=['GET'])
+def root():
+    return jsonify({"status": "healthy", "service": "Almari Backend"}), 200
 
 @app.route('/api/analyze-face', methods=['POST'])
 def analyze_face():
