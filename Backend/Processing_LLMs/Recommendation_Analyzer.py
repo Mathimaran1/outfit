@@ -98,22 +98,25 @@ def load_prompt(clothes, face, cloth_compare):
 
             No such words and general comments other than the formatted output.
             Output Format (Mandatory) follow this at any cost:
-
+            
             Features:
-            Face Shape Suitability - X/10
-            Complexion Matching - X/10
-            Body Type Fit - X/10
-            Beard & Hair Compatibility - X/10
-            Age Appropriateness - X/10
-            Overall Suitability - X/10
+            • Face Shape Suitability - X/10
+            • Complexion Matching - X/10
+            • Body Type Fit - X/10
+            • Beard & Hair Compatibility - X/10
+            • Age Appropriateness - X/10
+            • Overall Suitability - X/10
 
-            Wardrobe Comparison (Exclude Same Category and arrange in descending order of scores):
-            [Wardrobe Item Name] - X/10
+            Wardrobe Comparison (Ranked by Compatibility):
+            • [Item Name] - X/10
+            
             Overall Wardrobe Matches - X/10
 
             Final Verdict:
             Overall Score : X/10
-            Top Rated Outfits:[Wardrobe names only 5, descending order of scores. Don't display if the score is less than or equal to 5]
+            
+            Note: Do NOT include "Replace Top" or "Replace Bottom" sections in this text report. 
+            They must only be returned in the JSON improvements field.
         """
 
 # Formatting the response
@@ -157,11 +160,15 @@ def process_response(response_text):
     # Format item names
     cleaned_text = re.sub(r'\[([^\]]+)\]', r'\1', cleaned_text)
     cleaned_text = re.sub(r'Top Rated Outfits:.*?(?=\n\n|\Z)', '', cleaned_text, flags=re.DOTALL)
-    cleaned_text = cleaned_text.replace("##","")
-    cleaned_text = cleaned_text.replace("**","")
+    # Clean up formatting for UI display
+    cleaned_text = cleaned_text.replace("##","").replace("**","")
+    
+    # Remove any stray "Replace Top" or "Replace Bottom" sections from the text 
+    # if the AI ignores instructions, to keep the UI clean.
+    cleaned_text = re.sub(r'(?i)Replace Top:[\s\S]*?(?=\n\n|\Z)', '', cleaned_text)
+    cleaned_text = re.sub(r'(?i)Replace Bottom:[\s\S]*?(?=\n\n|\Z)', '', cleaned_text)
     
     logging.info(f"Processed text length: {len(cleaned_text)}")
-    
     return cleaned_text.strip()
 
 # Extracting the scores for the UI
