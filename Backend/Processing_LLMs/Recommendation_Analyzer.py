@@ -24,25 +24,35 @@ def load_yaml():
         }
 
 # Loading the prompt template
-def load_prompt(cloths, face, cloth_compare):
+def load_prompt(clothes, face, cloth_compare):
     logging.info("Loading the prompt template for the analysis")
+    
+    # Identify the current item to avoid self-recommendation
+    current_item_name = "Unknown"
+    current_item_category = "Unknown"
+    
+    try:
+        if isinstance(cloth_compare, str):
+            # Try to find Name: and Category: in the string
+            name_match = re.search(r"Name:\s*([^\n]+)", cloth_compare)
+            if name_match: current_item_name = name_match.group(1).strip()
+            
+            cat_match = re.search(r"Category:\s*([^\n]+)", cloth_compare)
+            if cat_match: current_item_category = cat_match.group(1).strip()
+    except:
+        pass
+
     return f"""
             REVISED PROMPT TEMPLATE — AI Stylist Evaluation (Stable & Consistent)
-            You are a strict and precise AI fashion stylist trained to evaluate a new clothing item against 
-            a user's personal features and wardrobe. Your task is to produce a consistent, reasoned, and 
-            comparative report.Only rate when meaningful. Penalize generously. Follow strict logic. Avoid high 
-            scores unless fully justified. You are an unforgiving, hyper-precise AI fashion evaluator. 
-            Your task is to ruthlessly assess the new clothing item against the user's features and wardrobe. No exceptions, no leniency.
+            You are a strict and precise AI fashion stylist. Your task is to evaluate a NEW clothing item against 
+            a user's personal features and wardrobe and provide specific, CATEGORIZED replacement suggestions.
+
+            CRITICAL SAFETY RULE:
+            - NEVER suggest the item named "{current_item_name}". It is already being worn/analyzed.
+            - "Replace Top" MUST only contain items that are explicitly categorized as Tops, Shirts, T-shirts, or Jackets.
+            - "Replace Bottom" MUST only contain items that are explicitly categorized as Bottoms, Pants, Trousers, or Jeans.
 
             User Details
-            Use the following face and body features for all personalization:
-            Face Type
-            Face Size
-            Face Structure
-            Skin Color
-            Hair Density
-            Beard Type
-            Body Type
             Height & Weight (for fat%)
             Age
             Details: 
@@ -168,6 +178,7 @@ def extract_scores_and_outfits(response_text):
     overall_score = None
     wardrobe_score = None
     top_rated_outfits = []
+    improvements = {"replace_top": [], "replace_bottom": []}
     
     # Extract overall score - it appears after "Overall Score:"
     # Pattern: "Overall Score: (X/10)" or "Overall Score : (X/10)"
@@ -207,12 +218,28 @@ def extract_scores_and_outfits(response_text):
                 if outfit_name:
                     top_rated_outfits.append(outfit_name)
         
-        logging.info(f"Extracted {len(top_rated_outfits)} top rated outfits")
+    logging.info(f"Extracted {len(top_rated_outfits)} top rated outfits")
+
+    # Extract Improvements (Replace Top/Bottom)
+    try:
+        # Match "Replace Top: Name1, Name2" or "Replace Top: Name1"
+        top_match = re.search(r"Replace Top:\s*([^\n]+)", response_text)
+        if top_match:
+            tops = [t.strip().replace("*", "") for t in top_match.group(1).split(",") if t.strip()]
+            improvements["replace_top"] = tops[:2] 
+
+        bottom_match = re.search(r"Replace Bottom:\s*([^\n]+)", response_text)
+        if bottom_match:
+            bottoms = [b.strip().replace("*", "") for b in bottom_match.group(1).split(",") if b.strip()]
+            improvements["replace_bottom"] = bottoms[:2]
+    except:
+        pass
     
     return {
         "overall_score": overall_score,
         "wardrobe_score": wardrobe_score,
-        "top_rated_outfits": top_rated_outfits
+        "top_rated_outfits": top_rated_outfits,
+        "improvements": improvements
     }
 
 # The main execution of the application
@@ -308,7 +335,8 @@ def get_recom_desc(clothes, face, cloth_compare, max_retries=3):
                 "recommendations": processed_response,
                 "overall_score": extracted_data["overall_score"],
                 "wardrobe_score": extracted_data["wardrobe_score"],
-                "top_rated_outfits": extracted_data["top_rated_outfits"]
+                "top_rated_outfits": extracted_data["top_rated_outfits"],
+                "improvements": extracted_data["improvements"]
             }
             
         except Exception as e:

@@ -177,6 +177,7 @@
 //   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
 //   const [error, setError] = useState<string | null>(null);
 //   const [occasion, setOccasion] = useState<string>('');
+  const [isInfoModalVisible, setIsInfoModalVisible] = useState(false);
 
 //   // Custom Alert States
 //   const [alertConfig, setAlertConfig] = useState<{
@@ -1464,7 +1465,10 @@ type AnalysisResult = {
   styleConsistency: number;
   occasionSuitability: number;
   personalizedFeedback: string;
-  improvements: string[];
+  improvements: {
+    replace_top: string[];
+    replace_bottom: string[];
+  };
   detailedAnalysis: {
     faceCompatibility: string;
     bodyTypeMatch: string;
@@ -1825,20 +1829,17 @@ export default function OutfitAnalysisScreen() {
           occasionSuitability: responseData.breakdown_scores?.Occasion || responseData.outfit_score,
 
           personalizedFeedback: responseData.recommendations || 'Analysis completed successfully',
-          improvements: responseData.replace_suggestions ?
-            Object.entries(responseData.replace_suggestions).map(([category, items]) =>
-              `Consider replacing ${category} with: ${Array.isArray(items) ? items.join(', ') : items}`
-            ) : [],
+          improvements: {
+            replace_top: responseData.improvements?.replace_top || [],
+            replace_bottom: responseData.improvements?.replace_bottom || []
+          },
           detailedAnalysis: {
             faceCompatibility: 'Analysis based on your facial features and the selected outfit',
             bodyTypeMatch: 'Outfit evaluated for your body type compatibility',
             colorAnalysis: 'Color coordination analyzed for the complete outfit',
-            styleRecommendations: responseData.replace_suggestions ?
-              `Consider these alternatives: ${Object.keys(responseData.replace_suggestions).join(', ')}` :
-              'Outfit style is well coordinated'
+            styleRecommendations: 'Outfit style evaluated based on personal features'
           },
-          tempScore: responseData.temp_score,
-          replaceSuggestions: responseData.replace_suggestions || {}
+          tempScore: responseData.temp_score
         };
 
         // Replace the problematic console.log with this simple one:
@@ -2017,12 +2018,20 @@ export default function OutfitAnalysisScreen() {
         {/* Overall Score */}
         <View style={styles.scoreCard}>
           <View style={styles.scoreHeader}>
-            <Text style={styles.scoreTitle}>Overall Compatibility</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={styles.scoreTitle}>Overall Compatibility</Text>
+              <TouchableOpacity 
+                onPress={() => setIsInfoModalVisible(true)}
+                style={{ marginLeft: 8 }}
+              >
+                <Ionicons name="information-circle-outline" size={22} color="#714463" />
+              </TouchableOpacity>
+            </View>
             <View style={[styles.scoreBadge, { backgroundColor: getScoreColor(analysisResult.overallScore * 10) }]}>
               <Text style={styles.scoreValue}>{analysisResult.overallScore}/10</Text>
             </View>
           </View>
-          <Text style={styles.scoreDescription}>{getScoreText(analysisResult.overallScore * 10)}</Text>
+          {/* Removed getScoreText to avoid double labels like Good/Fair */}
           <Text style={styles.compatibilityText}>{analysisResult.compatibility}</Text>
         </View>
 
@@ -2063,8 +2072,8 @@ export default function OutfitAnalysisScreen() {
             <Text style={styles.scorePercent}>{analysisResult.occasionSuitability}/10</Text>
           </View>
 
-          {/* Temp Score Section */}
-          {analysisResult.tempScore !== undefined && (
+          {/* Temp Score Section - Only show if > 0 */}
+          {analysisResult.tempScore !== undefined && analysisResult.tempScore > 0 && (
             <View style={styles.scoreRow}>
               <Text style={styles.scoreLabel}>Temp Item Score</Text>
               <View style={styles.scoreBar}>
@@ -2119,10 +2128,16 @@ export default function OutfitAnalysisScreen() {
         </View>
 
         {/* Replace Suggestions Section */}
-        {analysisResult.replaceSuggestions && Object.keys(analysisResult.replaceSuggestions).length > 0 && (
+        {analysisResult.improvements && (analysisResult.improvements.replace_top.length > 0 || analysisResult.improvements.replace_bottom.length > 0) && (
           <View style={styles.replaceSuggestionsContainer}>
             <Text style={styles.subsectionTitle}>Suggested Replacements</Text>
-            {Object.entries(analysisResult.replaceSuggestions).map(([category, items]) => {
+            
+            {Object.entries(analysisResult.improvements).map(([key, itemNames]) => {
+              if (!itemNames || itemNames.length === 0) return null;
+              
+              const categoryLabel = key === 'replace_top' ? 'Top' : 'Bottom';
+              const wardrobeType = key === 'replace_top' ? 'Top' : 'Bottom';
+              
               // Extract current outfit item IDs to ensure we don't suggest what they are already wearing
               const currentOutfitIds = [
                 outfitData?.top?.id,
@@ -2133,19 +2148,21 @@ export default function OutfitAnalysisScreen() {
               ].filter(Boolean);
 
               return (
-                <View key={category} style={styles.replaceCategorySection}>
-                  <Text style={styles.replaceCategoryTitle}>Replace {category}:</Text>
+                <View key={key} style={styles.replaceCategorySection}>
+                  <Text style={styles.replaceCategoryTitle}>Replace {categoryLabel}:</Text>
                   <View style={styles.replaceGrid}>
-                    {items.map((itemName, index) => {
-                      // Find the matching clothing item in allWardrobeItems, explicitly filtering out items they are already wearing
+                    {itemNames.map((itemName, index) => {
+                      // Find the matching clothing item in allWardrobeItems
+                      // CRITICAL: Must match the correct category (Top or Bottom) and not be currently worn
                       const matchingItem = allWardrobeItems.find(item =>
+                        item.type === wardrobeType && 
                         !currentOutfitIds.includes(item.id) &&
                         (item.name.toLowerCase() === itemName.toLowerCase() ||
                           itemName.toLowerCase().includes(item.name.toLowerCase()))
                       );
 
                       return matchingItem ? (
-                        <View key={index} style={styles.replaceGridItem}>
+                        <View key={`${key}-${index}`} style={styles.replaceGridItem}>
                           <View style={styles.replaceImageContainer}>
                             <Image
                               source={{ uri: matchingItem.imageUrl }}
@@ -2164,10 +2181,11 @@ export default function OutfitAnalysisScreen() {
                           </View>
                         </View>
                       ) : (
-                        <View key={index} style={styles.replaceGridItem}>
+                        <View key={`${key}-${index}`} style={styles.replaceGridItem}>
                           <View style={styles.replaceCardPlaceholder}>
                             <Ionicons name="shirt-outline" size={40} color="#714463" />
-                            <Text style={styles.replaceCardPlaceholderText}>{itemName} (Not Found or Current)</Text>
+                            <Text style={styles.replaceCardName}>{itemName}</Text>
+                            <Text style={styles.replaceCardPlaceholderText}>(Not Found or Current)</Text>
                           </View>
                         </View>
                       );
@@ -2302,14 +2320,43 @@ export default function OutfitAnalysisScreen() {
         {analysisResult && renderAnalysisResults()}
       </ScrollView>
 
-      {/* Custom Alert Modal */}
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        buttons={alertConfig.buttons}
-        onClose={hideCustomAlert}
-      />
+      {/* Info Modal explaining Match Logic */}
+      <Modal
+        visible={isInfoModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsInfoModalVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.alertOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsInfoModalVisible(false)}
+        >
+          <View style={styles.alertContainer}>
+            <View style={styles.alertHeader}>
+              <Ionicons name="information-circle-outline" size={32} color="#714463" />
+              <Text style={styles.alertTitle}>How we Match</Text>
+              <Text style={[styles.alertMessage, { textAlign: 'left', alignSelf: 'stretch' }]}>
+                Our AI Stylist evaluates your outfit based on four key factors:
+                {"\n\n"}
+                • <Text style={{ fontWeight: 'bold' }}>Color Harmony</Text>: Calculates how well the colors of your top, bottom, and footwear complement each other.
+                {"\n\n"}
+                • <Text style={{ fontWeight: 'bold' }}>Style Consistency</Text>: Checks if the design and material of each piece belong to the same style family (e.g., Casual, Formal).
+                {"\n\n"}
+                • <Text style={{ fontWeight: 'bold' }}>Occasion Suitability</Text>: Matches the entire outfit against your specified occasion and personal profile.
+                {"\n\n"}
+                • <Text style={{ fontWeight: 'bold' }}>Fit & Body Type</Text>: Analyzes how the clothing fit (Slim, Oversized, etc.) matches your body metrics.
+              </Text>
+            </View>
+            <TouchableOpacity 
+              style={[styles.alertButton, styles.defaultAlertButton]}
+              onPress={() => setIsInfoModalVisible(false)}
+            >
+              <Text style={styles.defaultAlertButtonText}>Got it!</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
