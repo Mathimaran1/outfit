@@ -87,14 +87,6 @@ def load_prompt(cloths, face, cloth_compare):
             No such words and general comments other than the formatted output.
             Output Format (Mandatory) follow this at any cost:
 
-            Features:
-            Face Shape Suitability - X/10
-            Complexion Matching - X/10
-            Body Type Fit - X/10
-            Beard & Hair Compatibility - X/10
-            Age Appropriateness - X/10
-            Overall Style Cohesion - X/10
-
             Wardrobe Comparison (Exclude Same Category and arrange in descending order of scores):
             [Wardrobe Item Name] - X/10
             Overall Wardrobe Matches - X/10
@@ -152,8 +144,7 @@ def process_response(response_text):
     
     return cleaned_text.strip()
 
-# Extracting the scores for the UI
-def extract_scores_and_outfits(response_text):
+# Extracting the scores for def extract_scores_and_outfits(response_text):
     """
     Extract key metrics from the LLM response:
     1. Overall Score (after "Overall Score:")
@@ -169,16 +160,6 @@ def extract_scores_and_outfits(response_text):
     wardrobe_score = None
     top_rated_outfits = []
     
-    # Feature scores
-    feature_scores = {
-        "face_shape": None,
-        "complexion": None,
-        "body_type": None,
-        "beard_hair": None,
-        "age": None,
-        "style_cohesion": None
-    }
-    
     # Extract overall score - it appears after "Overall Score:"
     # Pattern: "Overall Score: (X/10)" or "Overall Score : (X/10)"
     overall_score_match = re.search(r'Overall Score\s*:\s*\(?(\d+)(?:/10)?\)?', response_text)
@@ -192,22 +173,6 @@ def extract_scores_and_outfits(response_text):
     if wardrobe_score_match:
         wardrobe_score = int(wardrobe_score_match.group(1))
         logging.info(f"Extracted wardrobe matches score: {wardrobe_score}/10")
-
-    # Extract feature scores
-    feature_patterns = {
-        "face_shape": r'Face Shape Suitability\s*[-:]\s*(\d+)',
-        "complexion": r'Complexion Matching\s*[-:]\s*(\d+)',
-        "body_type": r'Body Type Fit\s*[-:]\s*(\d+)',
-        "beard_hair": r'Beard & Hair Compatibility\s*[-:]\s*(\d+)',
-        "age": r'Age Appropriateness\s*[-:]\s*(\d+)',
-        "style_cohesion": r'Overall Style Cohesion\s*[-:]\s*(\d+)'
-    }
-
-    for key, pattern in feature_patterns.items():
-        match = re.search(pattern, response_text)
-        if match:
-            feature_scores[key] = int(match.group(1))
-            logging.info(f"Extracted {key} score: {feature_scores[key]}/10")
     
     # Extract top rated outfits - appears after "Top Rated Outfits:" line
     # and items may be separated by commas
@@ -238,8 +203,9 @@ def extract_scores_and_outfits(response_text):
     return {
         "overall_score": overall_score,
         "wardrobe_score": wardrobe_score,
-        "top_rated_outfits": top_rated_outfits,
-        "feature_scores": feature_scores
+        "top_rated_outfits": top_rated_outfits
+    }
+
     }
 
 # The main execution of the application
@@ -335,8 +301,7 @@ def get_recom_desc(clothes, face, cloth_compare, max_retries=3):
                 "recommendations": processed_response,
                 "overall_score": extracted_data["overall_score"],
                 "wardrobe_score": extracted_data["wardrobe_score"],
-                "top_rated_outfits": extracted_data["top_rated_outfits"],
-                "feature_scores": extracted_data["feature_scores"]
+                "top_rated_outfits": extracted_data["top_rated_outfits"]
             }
             
         except Exception as e:
@@ -353,7 +318,6 @@ def get_recom_desc(clothes, face, cloth_compare, max_retries=3):
         "recommendations": processed_response,
         "overall_score": extracted_data.get("overall_score", "Re-Generate"),
         "wardrobe_score": extracted_data.get("wardrobe_score", "Re-Generate"),
-        "top_rated_outfits": extracted_data.get("top_rated_outfits", ["Re-Generate"]),
-        "feature_scores": extracted_data.get("feature_scores", {})
+        "top_rated_outfits": extracted_data.get("top_rated_outfits", ["Re-Generate"])
     }
 
