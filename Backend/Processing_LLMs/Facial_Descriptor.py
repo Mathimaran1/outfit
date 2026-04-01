@@ -116,14 +116,20 @@ def get_cloths_desc(image_path):
         }
         
         # Make API request
-        logging.info("Sending request to NVIDIA API")
-        response = requests.post(invoke_url, headers=headers, json=payload, timeout=45)
+        logging.info(f"Sending request to NVIDIA API (Timeout: 90s) with model: {config['Face_Desc']['model']}")
+        response = requests.post(invoke_url, headers=headers, json=payload, timeout=90)
         
         # Check for errors
-        response.raise_for_status()
+        if not response.ok:
+            logging.error(f"NVIDIA API Error: Status {response.status_code}, Body: {response.text}")
+            response.raise_for_status()
         
         # Parse response
         result = response.json()
+        if 'choices' not in result or not result['choices']:
+            logging.error(f"Unexpected NVIDIA API Response format: {result}")
+            raise ValueError("Invalid response format from NVIDIA API")
+
         description = result['choices'][0]['message']['content']
         
         # Clean the response
@@ -132,10 +138,16 @@ def get_cloths_desc(image_path):
         logging.info("Face description generated successfully")
         return description
 
+    except requests.exceptions.Timeout:
+        logging.error("NVIDIA API request timed out after 90 seconds")
+        raise RuntimeError("The analysis is taking too long. Please try with a smaller or clearer image.")
     except requests.exceptions.RequestException as e:
-        logging.error(f"API request error: {str(e)}")
-        raise RuntimeError(f"Failed to analyze face: {str(e)}")
+        error_msg = f"API request error: {str(e)}"
+        if hasattr(e, 'response') and e.response is not None:
+             error_msg += f" (Status {e.response.status_code}: {e.response.text})"
+        logging.error(error_msg)
+        raise RuntimeError(f"Failed to communicate with AI service: {str(e)}")
     except Exception as e:
         logging.error(f"Error in face analysis: {str(e)}")
-        raise RuntimeError(f"Failed to analyze face: {str(e)}")
+        raise RuntimeError(f"Internal error during face analysis: {str(e)}")
     

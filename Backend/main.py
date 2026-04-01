@@ -62,8 +62,9 @@ def analyze_face():
         return face_analysis, 200
     
     except Exception as e:
-        logging.error(f"Error analyzing face: {str(e)}")
-        return jsonify({'error': f'Failed to analyze face: {str(e)}'}), 500
+        error_msg = f"Error analyzing face: {str(e)}"
+        logging.error(error_msg)
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/analyze-clothing', methods=['POST'])
 def analyze_clothing():

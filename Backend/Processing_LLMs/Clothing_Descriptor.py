@@ -153,14 +153,20 @@ def get_cloths_desc(clothings):
             }
 
             # Make API request
-            logging.info(f"Sending request to NVIDIA API for {image_path}")
-            response = requests.post(invoke_url, headers=headers, json=payload, timeout=45)
+            logging.info(f"Sending request to NVIDIA API (Timeout: 90s) for {image_path} with model: {config['Clothing_Desc']['model']}")
+            response = requests.post(invoke_url, headers=headers, json=payload, timeout=90)
             
             # Check for errors
-            response.raise_for_status()
+            if not response.ok:
+                logging.error(f"NVIDIA API Error for {image_path}: Status {response.status_code}, Body: {response.text}")
+                response.raise_for_status()
             
             # Parse response
             result = response.json()
+            if 'choices' not in result or not result['choices']:
+                logging.error(f"Unexpected NVIDIA API Response format for {image_path}: {result}")
+                raise ValueError(f"Invalid response format from NVIDIA API for {image_path}")
+
             description = result['choices'][0]['message']['content']
             description = re.sub(r'\*', '', str(description))  # Clean unwanted symbols
             label = extract_label(description)
@@ -169,16 +175,21 @@ def get_cloths_desc(clothings):
                 "description": description,
                 "label": label
             })
-            print(description)
 
-        logging.info("Clothing descriptions generated successfully")
+        logging.info(f"Done! Evaluated {len(results)} items successfully")
         return results
 
+    except requests.exceptions.Timeout:
+        logging.error("NVIDIA API request for clothing timed out after 90 seconds")
+        raise RuntimeError("Wait time exceeded. Please try with fewer images or smaller files.")
     except requests.exceptions.RequestException as e:
-        logging.error(f"API request error: {e}")
+        error_msg = f"API request error: {e}"
+        if hasattr(e, 'response') and e.response is not None:
+             error_msg += f" (Status {e.response.status_code}: {e.response.text})"
+        logging.error(error_msg)
         raise RuntimeError(f"Failed to analyze clothing: {e}")
     except Exception as e:
         logging.error(f"Error in clothing analysis: {e}")
-        raise RuntimeError(f"Failed to analyze clothing: {e}")
+        raise RuntimeError(f"Internal error during clothing analysis: {e}")
     
     
