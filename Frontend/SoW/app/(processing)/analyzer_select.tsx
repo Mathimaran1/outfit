@@ -1743,7 +1743,7 @@ export default function AnalyzerSelect() {
             headers: {
               Accept: 'application/json'
             },
-            timeout: 30000 // 30 seconds timeout
+            timeout: 90000 // 90 seconds timeout
           }
         );
 

@@ -4344,7 +4344,7 @@ export default function AppearanceForm({ onComplete, visible }: AppearanceFormPr
 
       // Send the image to the backend
       const apiResponse = await axios.post(`${BACKEND_URL}/api/analyze-face`, formData, {
-        timeout: 30000,
+        timeout: 90000,
         headers: {
           Accept: 'application/json',
         },
