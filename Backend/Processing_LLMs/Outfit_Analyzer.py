@@ -123,7 +123,7 @@ def load_prompt(cloths, face, outfit_selected, occasion):
     - Texture: [X/10]
 
     Improvements:
-    Replace [Category]: [Only suggest for categories with NO temp items. Never show category headers for temp-containing categories. Best 1-2 ALTERNATIVE wardrobe items names only. DO NOT suggest items currently being worn. No reasoning needed from each category mandatory. exclude the TEMP category here only.]
+    Replace [Category]: [Suggest only for categories that need improvement to boost the score. Best 1-2 ALTERNATIVE wardrobe items names only. DO NOT suggest items currently being worn. No reasoning needed. If a category is performing poorly, ALWAYS suggest a replacement from the wardrobe.]
 """
 
 # Formatting the response
