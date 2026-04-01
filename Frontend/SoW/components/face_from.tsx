@@ -4326,7 +4326,11 @@ export default function AppearanceForm({ onComplete, visible }: AppearanceFormPr
 
     setAnalyzing(true);
     setAnalysisError(null);
-    const targetUrl = `${BACKEND_URL || 'https://mathi0x-almari-backend.hf.space'}/`;
+    
+    // Slash-safe URL construction
+    const rawUrl = BACKEND_URL || 'https://mathi0x-almari-backend.hf.space';
+    const baseUrl = rawUrl.endsWith('/') ? rawUrl : `${rawUrl}/`;
+    const targetUrl = baseUrl;
     
     try {
       // --- WAKE UP CALL & VERIFY CONNECTION ---
@@ -4348,8 +4352,9 @@ export default function AppearanceForm({ onComplete, visible }: AppearanceFormPr
       } as any);
 
       // Send the image to the backend
-      console.log(`Sending image to ${targetUrl}api/analyze-face (Timeout: 120s)`);
-      const apiResponse = await axios.post(`${targetUrl}api/analyze-face`, formData, {
+      const fullUrl = `${targetUrl}api/analyze-face`;
+      console.log(`Sending image to ${fullUrl} (Timeout: 120s)`);
+      const apiResponse = await axios.post(fullUrl, formData, {
         timeout: 120000, // 2 minutes
         headers: {
           Accept: 'application/json',
