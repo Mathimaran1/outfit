@@ -340,8 +340,7 @@ def get_recom_desc(clothes, face, cloth_compare, max_retries=3):
             
             # Check if any critical data is missing
             if (extracted_data["overall_score"] is None or 
-                extracted_data["wardrobe_score"] is None or 
-                extracted_data["top_rated_outfits"] == []):
+                extracted_data["wardrobe_score"] is None):
                 
                 retry_count += 1
                 logging.warning(f"Missing critical data in LLM response. Retry attempt {retry_count}/{max_retries}")
