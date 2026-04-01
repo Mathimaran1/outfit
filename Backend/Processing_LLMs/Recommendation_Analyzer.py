@@ -346,8 +346,8 @@ def get_recom_desc(clothes, face, cloth_compare, max_retries=3):
             logging.error(f"Error during LLM processing: {str(e)}. Retry attempt {retry_count}/{max_retries}")
             
             if retry_count >= max_retries:
-                logging.error("Max retries reached after exceptions. Raising error.")
-                raise
+                logging.error("Max retries reached after exceptions. Returning fallback data.")
+                break
     
     # If we get here after max retries, return whatever we have
     logging.warning("Returning results after max retries with missing data")
