@@ -4383,6 +4383,9 @@ export default function AppearanceForm({ onComplete, visible }: AppearanceFormPr
       
       if (axios.isAxiosError(error)) {
         debugInfo += `Type: AxiosError\nCode: ${error.code}\nMsg: ${error.message}`;
+        if (error.toJSON) {
+          debugInfo += `\nFullError: ${JSON.stringify(error.toJSON())}`;
+        }
         if (error.code === 'ECONNABORTED') {
           errorMsg = 'Timeout: The analysis is taking too long.';
         } else if (!error.response) {
